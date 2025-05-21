@@ -2,9 +2,13 @@
   "name": "flutter-tests-generator",
   "displayName": "Flutter Tests Generator",
   "description": "",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "engines": {
     "vscode": "^1.100.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ParhamAB/flutter-tests-generator-extention.git"
   },
   "categories": [
     "Other"
@@ -17,7 +21,7 @@
     "commands": [
       {
         "command": "extension.generateModelTest",
-        "title": "Generate Model Test"
+        "title": "Flutter Generate Model Test"
       }
     ],
     "menus": {
@@ -25,7 +29,7 @@
         {
           "command": "extension.generateModelTest",
           "when": "explorerResourceIsFolder || resourceExtname == .dart",
-          "group": "navigation"
+          "group": "1_modification"
         }
       ]
     }

@@ -1,71 +1,103 @@
-# flutter-tests-generator README
+# 🧪 Flutter Test Generator
 
-This is the README for your extension "flutter-tests-generator". After writing up a brief description, we recommend including the following sections.
+> ⚠️ **Note:** Only the **Model Test Generator** feature is available for now.  
+> Support for other test types like **Bloc Test**, **Widget Test**, etc., will be added in the future.
 
-## Features
+The **Model Test Generator** feature of this extension helps you quickly scaffold unit tests for your Dart model classes in Flutter projects — saving time and improving consistency.
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
-
-For example if there is an image subfolder under your extension project workspace:
-
-\!\[feature X\]\(images/feature-x.png\)
-
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
-
-## Requirements
-
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
-
-## Extension Settings
-
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
-
-For example:
-
-This extension contributes the following settings:
-
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
-
-## Known Issues
-
-Calling out known issues can help limit users opening duplicate issues against your extension.
-
-## Release Notes
-
-Users appreciate release notes as you update your extension.
-
-### 1.0.0
-
-Initial release of ...
-
-### 1.0.1
-
-Fixed issue #.
-
-### 1.1.0
-
-Added features X, Y, and Z.
 
 ---
 
-## Following extension guidelines
+## 🚀 Features
 
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
+✅ Adds a right-click menu option:  
+**"Flutter Generate Model Test"** under the `Modification` section
 
-* [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
+✅ Automatically generates model test templates based on this structure:  
+![Model Test Template](https://github.com/user-attachments/assets/3750b015-bf72-4a46-8176-b889b1aa50f9)
 
-## Working with Markdown
+✅ Outputs test files like this:  
+![Generated Test Output](https://github.com/user-attachments/assets/5f790873-4902-42c4-b574-50effac8fa9e)
 
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
+✅ Works on **single files** and **entire folders**
 
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
+---
 
-## For more information
+## 📂 How It Works
 
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
+### ✅ Right Click on a Dart File
+- Adds the option: `Flutter Generate Model Test`
+- Generates a corresponding `*_test.dart` file with the required structure
 
-**Enjoy!**
+### ✅ Right Click on a Folder
+- Recursively scans for Dart files that contain `MODEL` in:
+  - The **filename**, and
+  - The **class name**
+- Automatically generates model tests for each valid file
+
+---
+
+## 🧱 Generated Test Structure
+
+Each generated test file includes:
+
+```dart
+//***IMPORTS***//
+
+void main() {
+  //***ExampleModel-START***//
+
+  // test case...
+
+  //***ExampleModel-END***//
+
+  //***LAST-LINE***//
+}
+```
+
+## 📝 Comment Tags
+
+//***IMPORTS***//:
+Used for auto-managing necessary imports during test generation or modification.
+
+//***<ClassName>-START***// and //***<ClassName>-END***//:
+Marks the beginning and end of each model's test block.
+⚠️ Do not remove or edit these manually unless you want to completely regenerate that test.
+
+//***LAST-LINE***//:
+Acts as an anchor to append new model tests in the future if additional classes are found in the same file.
+
+## ⚠️ Requirements
+To enable model test generation:
+
+The filename and class name must include the word "MODEL"
+Example:
+
+✅ user_model.dart with class UserModel
+
+✅ productMODEL.dart with class ProductMODEL
+
+❌ user.dart with class User
+
+## 💡 Why Use This?
+. Saves time writing repetitive test templates
+
+. Enforces a consistent structure for unit tests
+
+. Scalable — works with multiple files and folders
+
+. Easy to modify and extend tests in future using the comment anchors
+
+## 📌 Tip
+
+If you want to regenerate a specific model test, delete the block between:
+
+```dart
+//***ClassName-START***//
+//***ClassName-END***//
+```
+Then re-run the extension on that file or folder.
+
+## 🙌 Contribution & Feedback
+Found a bug or have a suggestion?
+Feel free to open an issue or pull request on [GitHub](https://github.com/ParhamAB/flutter-tests-generator-extention).
