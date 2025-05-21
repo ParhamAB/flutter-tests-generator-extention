@@ -14,10 +14,10 @@ The **Model Test Generator** feature of this extension helps you quickly scaffol
 **"Flutter Generate Model Test"** under the `Modification` section
 
 ✅ Automatically generates model test templates based on this structure:  
-![Model Test Template](https://github.com/user-attachments/assets/3750b015-bf72-4a46-8176-b889b1aa50f9)
+![Model Test Template](images/example_model.png)
 
 ✅ Outputs test files like this:  
-![Generated Test Output](https://github.com/user-attachments/assets/5f790873-4902-42c4-b574-50effac8fa9e)
+![Generated Test Output](images/test_example.png)
 
 ✅ Works on **single files** and **entire folders**
 

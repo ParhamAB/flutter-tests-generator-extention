@@ -2,7 +2,9 @@
   "name": "flutter-tests-generator",
   "displayName": "Flutter Tests Generator",
   "description": "",
-  "version": "1.0.0",
+  "version": "1.0.1",
+  "publisher": "ParhamAB",
+  "icon": "icon.png",
   "engines": {
     "vscode": "^1.100.0"
   },
