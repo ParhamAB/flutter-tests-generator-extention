@@ -134,15 +134,11 @@ function generateModelTest(
             .replaceAll(";", "")
             .trim()}';\n`;
         } else {
-          console.log(el);
           let modelImportTemp = allModels.find((el2) =>
             el2.importPath.includes(
               el.replaceAll("'", "").replaceAll(";", "").trim()
             )
           );
-          console.log("************************");
-          console.log(allModels);
-          console.log(modelImportTemp);
           if (modelImportTemp !== null && modelImportTemp !== undefined) {
             imports += `import '${modelImportTemp.importPath}';\n`;
           }
