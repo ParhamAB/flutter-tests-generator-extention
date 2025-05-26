@@ -22,10 +22,7 @@ interface DataSource {
   data_source_name: string;
   data_source_file_name: string;
   methods: MethodInfo[];
-}
-
-interface ProjectDataSources {
-  data_sources: DataSource[];
+  imports: string;
 }
 
 class DataSourceTestGenerator {
@@ -57,7 +54,7 @@ class DataSourceTestGenerator {
       if (!param) continue;
       const lastSpaceIndex = param.lastIndexOf(" ");
       if (lastSpaceIndex === -1) {
-        console.warn(`Could not properly parse parameter: ${param}`);
+        // console.warn(`Could not properly parse parameter: ${param}`);
         continue;
       }
 
@@ -152,6 +149,16 @@ class DataSourceTestGenerator {
 
     try {
       const content = fs.readFileSync(filePath, "utf-8");
+      const imports = content
+        .split("\n")
+        .filter(
+          (line) =>
+            line.includes("import") &&
+            line.includes("package:") &&
+            !line.includes("injectable/injectable") &&
+            !line.includes("dio/dio")
+        )
+        .join("\n");
       const lines = content.split("\n");
 
       for (const line of lines) {
@@ -189,7 +196,13 @@ class DataSourceTestGenerator {
               if (returnType && methodName) {
                 methods.push({
                   method_name: methodName,
-                  return_type: returnType,
+                  return_type:
+                    returnType && returnType.startsWith("Future<")
+                      ? returnType
+                          .replace(/^Future<(.+)>$/, "$1")
+                          .trim()
+                          .replaceAll("?", "")
+                      : returnType.replaceAll("?", ""),
                   params: paramsString,
                   http_method: httpMethod,
                   instance_name: instanceName,
@@ -212,10 +225,11 @@ class DataSourceTestGenerator {
           data_source_name: dataSourceName,
           data_source_file_name: path.basename(filePath).replace(".dart", ""),
           methods,
+          imports,
         };
       }
     } catch (error) {
-      console.error(`Error processing file ${filePath}:`, error);
+      // console.error(`Error processing file ${filePath}:`, error);
     }
     return null;
   }
@@ -237,29 +251,19 @@ class DataSourceTestGenerator {
               files.push(fullPath);
             }
           } catch (error) {
-            console.error(`Error processing ${fullPath}:`, error);
+            // console.error(`Error processing ${fullPath}:`, error);
           }
         });
       } catch (error) {
-        console.error(`Error reading directory ${dir}:`, error);
+        // console.error(`Error reading directory ${dir}:`, error);
       }
     };
     walk(directory);
     return files;
   }
 
-  private process_project_data_sources(
-    sourceDirectory: string
-  ): ProjectDataSources {
-    const dataSources: DataSource[] = [];
-    const dartFiles = this.find_data_source_files(sourceDirectory);
-    for (const filePath of dartFiles) {
-      const dataSource = this.process_file(filePath);
-      if (dataSource) dataSources.push(dataSource);
-    }
-    return { data_sources: dataSources };
-  }
-
+  // This is the new generateMethodParams function you provided.
+  // Ensure getAllModels and getTestValue are accessible in this scope.
   private generateMethodParams(innerTypes: InnerType[]): string {
     if (!innerTypes || innerTypes.length === 0) return "";
     return innerTypes
@@ -273,7 +277,7 @@ class DataSourceTestGenerator {
         if (paramType.includes("num")) return "1";
         if (paramType.startsWith("list<")) return "[]";
         if (paramType.startsWith("map<")) return `{"test" : "test"}`;
-        let models = getAllModels();
+        let models = getAllModels(); // Needs actual implementation
         let selectedClass = models.find(
           (el) => el.modelName == param.type.replace("?", "")
         );
@@ -281,7 +285,7 @@ class DataSourceTestGenerator {
           let fieldLines = Object.entries(selectedClass!.fields)
             .map(
               ([fieldName, fieldType]) =>
-                `${fieldName}: ${getTestValue(fieldType)}`
+                `${fieldName}: ${getTestValue(fieldType, models)}` // Passed models here
             )
             .join(", ");
           return `${selectedClass.modelName}(${fieldLines})`;
@@ -300,7 +304,7 @@ class DataSourceTestGenerator {
     const returnType = method.return_type || "dynamic";
     const httpMethod = method.http_method?.toLowerCase() || "get";
 
-    let methodBlockContent = `
+    let methodBlockContent = `//***${methodName}-START***//
     group('${methodName}', () {
       test('should return ${returnType} when ${httpMethod.toUpperCase()} request is successful', () async {
         final expectedData = <String, dynamic>{};
@@ -333,30 +337,51 @@ class DataSourceTestGenerator {
         );
       });
     });
-`;
+//***${methodName}-END***//`;
     return methodBlockContent;
   }
 
   private generateInitialTestFileContent(
     dataSource: DataSource,
-    projectPackageName: string = "your_project_name"
+    projectPackageName: string = "your_project_name",
+    relativePathFromLib: string
   ): string {
     const className = dataSource.data_source_name;
     const dataSourceFileName = dataSource.data_source_file_name;
     const concreteClassName = className.startsWith("I")
       ? className.substring(1)
       : className;
+    const featureNameGuess = dataSourceFileName
+      .split("_data_source")[0]
+      .toLowerCase();
+
+    // Collect all unique instance names from methods
+    const uniqueInstanceNames = Array.from(
+      new Set(
+        dataSource.methods
+          .map((m) => m.instance_name)
+          .filter((name): name is string => !!name)
+      )
+    );
+
+    // Generate getIt.registerSingleton lines for each unique instance name
+    const registerSingletonLines = uniqueInstanceNames
+      .map(
+        (instanceName) =>
+          `getIt.registerSingleton<Dio>(mockDio, instanceName: ${instanceName});`
+      )
+      .join("\n      ");
 
     let initialContent = `import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
-import 'package:mockito/annotations.dart';
 import 'package:dio/dio.dart';
-import 'package:${projectPackageName}/features/${dataSourceFileName
-      .split("_data_source")[0]
-      .toLowerCase()}/data/datasources/${dataSourceFileName}.dart';
+import 'package:${projectPackageName}/${relativePathFromLib}';
+${dataSource.imports
+  .split("\n")
+  .filter((el) => !el.includes("injectable") || !el.includes("dio/dio"))
+  .join("\n")}
+//***IMPORTS***//
 
-@GenerateMocks([Dio])
-import '${dataSourceFileName}_test.mocks.dart';
 
 void main() {
   group('${concreteClassName}', () {
@@ -365,7 +390,12 @@ void main() {
 
     setUp(() {
       mockDio = MockDio();
-      dataSource = ${concreteClassName}(mockDio);
+      dataSource = ${concreteClassName}();
+      ${registerSingletonLines}
+    });
+
+    tearDown((){
+      getIt.reset();
     });
 
 `;
@@ -378,7 +408,7 @@ void main() {
       initialContent += "\n\n";
     }
 
-    initialContent += `
+    initialContent += `    //***LAST-LINE***//
   });
 }
 `;
@@ -407,41 +437,38 @@ void main() {
     const concreteClassName = dataSource.data_source_name.startsWith("I")
       ? dataSource.data_source_name.substring(1)
       : dataSource.data_source_name;
+    const featureNameGuess = dataSource.data_source_file_name
+      .split("_data_source")[0]
+      .toLowerCase();
 
     try {
       if (!fs.existsSync(targetTestDirectory)) {
         fs.mkdirSync(targetTestDirectory, { recursive: true });
       }
 
-      const importPlaceholder = "@GenerateMocks([Dio])";
-      const newImportLine = `import 'package:${projectPackageName}/${path
-        .join(
-          libDirName,
-          relativePathFromLib,
-          dataSource.data_source_file_name + ".dart"
-        )
-        .replace(/\\/g, "/")}';`;
-
       if (fs.existsSync(testFilePath)) {
         let existingContent = fs.readFileSync(testFilePath, "utf-8");
         let contentModified = false;
 
-        if (
-          !existingContent.includes(newImportLine) &&
-          existingContent.includes(importPlaceholder)
-        ) {
+        const importsMarker = "//***IMPORTS***//";
+
+        if (existingContent.includes(importsMarker)) {
           existingContent = existingContent.replace(
-            importPlaceholder,
-            `${newImportLine}\n${importPlaceholder}`
+            importsMarker,
+            `${dataSource.imports
+              .split("\n")
+              .filter((el) => !existingContent.includes(el))
+              .join("\n")}\n${importsMarker}`
           );
           contentModified = true;
         }
 
-        const setUpRegex =
-          /setUp\(\(\) \{\s*mockDio = MockDio\(\);\s*dataSource = \w+\(mockDio\);\s*\}\);/;
+        const setUpRegex = new RegExp(
+          `setUp\\(\s*\\(\s*\\)\\s*=>\\s*{\\s*mockDio\\s*=\\s*MockDio\\(\\s*\\);\\s*dataSource\\s*=\\s*${concreteClassName}\\(mockDio\\);\\s*}\\);`
+        );
         if (!setUpRegex.test(existingContent)) {
           const groupLineRegex = new RegExp(
-            `group\\('${concreteClassName}', \\(\\) \\{`
+            `group\\(\\s*'${concreteClassName}'\\s*,\\s*\\(\\s*\\)\\s*=>\\s*{`
           );
           const newSetupBlock = `
     late MockDio mockDio;
@@ -451,19 +478,19 @@ void main() {
       mockDio = MockDio();
       dataSource = ${concreteClassName}(mockDio);
     });`;
-          existingContent = existingContent.replace(
-            groupLineRegex,
-            `group('${concreteClassName}', () {${newSetupBlock}`
-          );
-          contentModified = true;
+          if (groupLineRegex.test(existingContent)) {
+            existingContent = existingContent.replace(
+              groupLineRegex,
+              `group('${concreteClassName}', () {${newSetupBlock}`
+            );
+            contentModified = true;
+          }
         }
 
         let newMethodBlocksCombined = "";
         for (const method of dataSource.methods) {
-          const startMarkerRegex = new RegExp(
-            `group\\('${method.method_name}'`
-          );
-          if (!startMarkerRegex.test(existingContent)) {
+          const startMarker = `//***${method.method_name}-START***//`;
+          if (!existingContent.includes(startMarker)) {
             newMethodBlocksCombined +=
               this.generateMethodTestBlock(
                 method,
@@ -474,22 +501,20 @@ void main() {
           }
         }
 
+        const lastLineMarker = "//***LAST-LINE***//";
         if (newMethodBlocksCombined) {
-          const mainGroupEndPattern = new RegExp(`\\n\\s*}\\);\\s*$`);
-          if (mainGroupEndPattern.test(existingContent)) {
+          if (existingContent.includes(lastLineMarker)) {
             existingContent = existingContent.replace(
-              mainGroupEndPattern,
-              (match) =>
-                `\n${newMethodBlocksCombined.trimEnd()}\n${match.trimStart()}`
+              lastLineMarker,
+              newMethodBlocksCombined.trimEnd() + "\n    " + lastLineMarker
             );
-            contentModified = true;
           } else {
-            const lastClosingBrace = existingContent.lastIndexOf("}");
-            if (lastClosingBrace !== -1) {
+            const mainGroupEndPattern = /}\s*\);\s*$/;
+            const match = existingContent.match(mainGroupEndPattern);
+            if (match && match.index !== undefined) {
               existingContent =
-                existingContent.substring(0, lastClosingBrace) +
-                newMethodBlocksCombined +
-                existingContent.substring(lastClosingBrace);
+                existingContent.substring(0, match.index) +
+                `\n${newMethodBlocksCombined.trimEnd()}\n    ${lastLineMarker}\n});`;
               contentModified = true;
             }
           }
@@ -501,24 +526,14 @@ void main() {
       } else {
         let initialContent = this.generateInitialTestFileContent(
           dataSource,
-          projectPackageName
+          projectPackageName,
+          `${relativePathFromLib}/${originalFilePath.split("/").pop() ?? ""}`
         );
-        if (
-          !initialContent.includes(newImportLine) &&
-          initialContent.includes(importPlaceholder)
-        ) {
-          initialContent = initialContent.replace(
-            importPlaceholder,
-            `${newImportLine}\n${importPlaceholder}`
-          );
-        }
         fs.writeFileSync(testFilePath, initialContent, "utf-8");
       }
       return testFilePath;
     } catch (error: any) {
-      vscode.window.showErrorMessage(
-        `Failed to create/update test file at ${testFilePath}: ${error.message}`
-      );
+      // vscode.window.showErrorMessage(`Failed to create/update test file at ${testFilePath}: ${error.message}`);
       throw new Error(
         `Failed to create/update test file at ${testFilePath}: ${error.message}`
       );
@@ -533,9 +548,7 @@ void main() {
       );
 
       if (!workspaceFolder) {
-        vscode.window.showErrorMessage(
-          "No workspace folder found for the selected resource."
-        );
+        // vscode.window.showErrorMessage('No workspace folder found for the selected resource.');
         return;
       }
 
@@ -560,13 +573,8 @@ void main() {
       let filesToProcess: string[] = [];
 
       if (stat.isDirectory()) {
-        if (
-          !resourcePath.includes(path.join(rootPath, libDirName)) &&
-          resourcePath !== path.join(rootPath, libDirName)
-        ) {
-          vscode.window.showWarningMessage(
-            `Selected directory might not be inside the '${libDirName}' folder. Ensure data sources are within '${libDirName}'.`
-          );
+        if (!resourcePath.includes(path.join(rootPath, libDirName)) && resourcePath !== path.join(rootPath, libDirName)) {
+             vscode.window.showWarningMessage(`Selected directory might not be inside the '${libDirName}' folder. Ensure data sources are within '${libDirName}'.`);
         }
         filesToProcess = this.find_data_source_files(resourcePath);
       } else if (
@@ -574,25 +582,17 @@ void main() {
         resourcePath.toLowerCase().includes("data_source") &&
         resourcePath.endsWith(".dart")
       ) {
-        if (
-          !path.dirname(resourcePath).includes(path.join(rootPath, libDirName))
-        ) {
-          vscode.window.showWarningMessage(
-            `Selected file might not be inside the '${libDirName}' folder. Ensure data source is within '${libDirName}'.`
-          );
+        if (!path.dirname(resourcePath).includes(path.join(rootPath, libDirName))) {
+             vscode.window.showWarningMessage(`Selected file might not be inside the '${libDirName}' folder. Ensure data source is within '${libDirName}'.`);
         }
         filesToProcess = [resourcePath];
       } else {
-        vscode.window.showInformationMessage(
-          "Selected resource is not a directory or a Dart data source file."
-        );
+        // vscode.window.showInformationMessage('Selected resource is not a directory or a Dart data source file.');
         return;
       }
 
       if (filesToProcess.length === 0) {
-        vscode.window.showInformationMessage(
-          "No data source files found in the selected location."
-        );
+        // vscode.window.showInformationMessage('No data source files found in the selected location.');
         return;
       }
 
@@ -624,56 +624,38 @@ void main() {
             );
             createdFiles.push(testFilePath);
           } catch (error: any) {
-            console.error(
-              `Error creating test for ${dataSource.data_source_name}:`,
-              error.message
-            );
-            vscode.window.showErrorMessage(
-              `Failed to create test for ${dataSource.data_source_name}: ${error.message}`
-            );
+            // console.error(`Error creating test for ${dataSource.data_source_name}:`, error.message);
+            // vscode.window.showErrorMessage(`Failed to create test for ${dataSource.data_source_name}: ${error.message}`);
           }
         }
       }
 
       if (createdFiles.length > 0) {
         const message = `Generated ${createdFiles.length} test file(s).`;
-        const openTestAction = "Open First Test";
-        const openFolderAction = "Reveal Test Folder";
+        // const openTestAction = 'Open First Test';
+        // const openFolderAction = 'Reveal Test Folder';
 
-        let chosenAction: string | undefined;
-        if (createdFiles.length === 1 && firstTestDirectory) {
-          chosenAction = await vscode.window.showInformationMessage(
-            message,
-            openTestAction,
-            openFolderAction
-          );
-        } else if (firstTestDirectory) {
-          chosenAction = await vscode.window.showInformationMessage(
-            message,
-            openFolderAction
-          );
-        } else {
-          vscode.window.showInformationMessage(message);
-        }
+        // let chosenAction: string | undefined;
+        // if (createdFiles.length === 1 && firstTestDirectory) {
+        //      chosenAction = await vscode.window.showInformationMessage(message, openTestAction, openFolderAction);
+        // } else if (firstTestDirectory) {
+        //      chosenAction = await vscode.window.showInformationMessage(message, openFolderAction);
+        // } else {
+        //      vscode.window.showInformationMessage(message);
+        // }
 
-        if (chosenAction === openFolderAction && firstTestDirectory) {
-          const testFolderUri = vscode.Uri.file(firstTestDirectory);
-          await vscode.commands.executeCommand(
-            "revealInExplorer",
-            testFolderUri
-          );
-        } else if (chosenAction === openTestAction && createdFiles.length > 0) {
-          const document = await vscode.workspace.openTextDocument(
-            createdFiles[0]
-          );
-          await vscode.window.showTextDocument(document);
-        }
+        // if (chosenAction === openFolderAction && firstTestDirectory) {
+        //     const testFolderUri = vscode.Uri.file(firstTestDirectory);
+        //     await vscode.commands.executeCommand('revealInExplorer', testFolderUri);
+        // } else if (chosenAction === openTestAction && createdFiles.length > 0) {
+        //     const document = await vscode.workspace.openTextDocument(createdFiles[0]);
+        //     await vscode.window.showTextDocument(document);
+        // }
+        vscode.window.showInformationMessage(message);
       }
     } catch (error: any) {
-      console.error("Error generating tests:", error.message);
-      vscode.window.showErrorMessage(
-        `Error generating tests: ${error.message}`
-      );
+      // console.error('Error generating tests:', error.message);
+      // vscode.window.showErrorMessage(`Error generating tests: ${error.message}`);
     }
   }
 }
@@ -685,9 +667,7 @@ async function generateDataSourceTest(uri?: vscode.Uri) {
     if (activeEditor && activeEditor.document.uri.scheme === "file") {
       resourceUri = activeEditor.document.uri;
     } else {
-      vscode.window.showErrorMessage(
-        "Please select a file or folder in the explorer or open a data source file to generate tests."
-      );
+      // vscode.window.showErrorMessage('Please select a file or folder in the explorer or open a data source file to generate tests.');
       return;
     }
   }
