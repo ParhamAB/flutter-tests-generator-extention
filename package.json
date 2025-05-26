@@ -1,7 +1,7 @@
 {
   "name": "flutter-tests-generator",
   "displayName": "Flutter Tests Generator",
-  "description": "",
+  "description": "Boost your Flutter development workflow with Flutter Test Generator, a powerful VS Code extension that automatically generates unit and widget tests for your Model, DataSource, Repository, Bloc, and Widget layers following a feature-based architecture.",
   "version": "1.0.2",
   "publisher": "ParhamAB",
   "icon": "icon.png",
