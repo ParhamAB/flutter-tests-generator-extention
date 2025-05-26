@@ -23,13 +23,22 @@
     "commands": [
       {
         "command": "extension.generateModelTest",
-        "title": "Flutter Generate Model Test"
+        "title": "🧪 Flutter Generate Model Test"
+      },
+      {
+        "command": "extension.generateDataSourceTest",
+        "title": "🧪 Flutter Generate Data Source Test"
       }
     ],
     "menus": {
       "explorer/context": [
         {
           "command": "extension.generateModelTest",
+          "when": "explorerResourceIsFolder || resourceExtname == .dart",
+          "group": "1_modification"
+        },
+        {
+          "command": "extension.generateDataSourceTest",
           "when": "explorerResourceIsFolder || resourceExtname == .dart",
           "group": "1_modification"
         }

@@ -61,7 +61,7 @@ function extractModelInfo(fileContent: string): ModelInfo[] {
 }
 
 
-function getTestValue(
+export function getTestValue(
   fieldType: string,
   modelsPriority: ModelInfo[] = []
 ): string {
@@ -296,7 +296,7 @@ async function checkFolderContainsModelFiles(
   }
 }
 
-async function registerModelGeneratorCommand(allModels: ModelInfo[]) {
+async function registerModelGeneratorCommand() {
   return vscode.commands.registerCommand(
     "extension.generateModelTest",
     async (uri: vscode.Uri) => {
@@ -486,8 +486,7 @@ async function registerModelGeneratorCommand(allModels: ModelInfo[]) {
 }
 
 export async function registerModelGeneratorModule(
-  context: vscode.ExtensionContext,
-  allModels: ModelInfo[]
+  context: vscode.ExtensionContext
 ) {
   const folderContextUpdater = async (uri?: vscode.Uri) => {
     if (!uri) {
@@ -553,7 +552,7 @@ export async function registerModelGeneratorModule(
 
   folderContextUpdater();
 
-  const modelDisposable = await registerModelGeneratorCommand(allModels);
+  const modelDisposable = await registerModelGeneratorCommand();
 
   context.subscriptions.push(modelDisposable);
 }
