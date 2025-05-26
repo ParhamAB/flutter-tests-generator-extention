@@ -4,16 +4,6 @@ import * as path from "path";
 import { getAllModels } from "../utils/model_utils";
 import { getTestValue } from "./models_test_generator";
 
-// Assuming ModelInfo is defined in one of the imported files or globally
-// If not, you might need to define/import it:
-// interface ModelInfo {
-//   modelName: string;
-//   fields: Record<string, string>;
-//   importPath: string;
-//   hasToJson?: boolean;
-//   hasFromJson?: boolean;
-// }
-
 interface InnerType {
   name: string;
   type: string;
@@ -32,7 +22,7 @@ interface DataSource {
   data_source_name: string;
   data_source_file_name: string;
   methods: MethodInfo[];
-  imports: string; // Imports from the source data source file
+  imports: string;
 }
 
 class DataSourceTestGenerator {
@@ -160,7 +150,7 @@ class DataSourceTestGenerator {
 
     try {
       const content = fs.readFileSync(filePath, "utf-8");
-      importsData = content // Store all imports from the source file
+      importsData = content 
         .split("\n")
         .filter((line) => line.trim().startsWith("import "))
         .join("\n");
