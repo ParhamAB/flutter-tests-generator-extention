@@ -290,8 +290,8 @@ class DataSourceTestGenerator {
 
   private generateMethodTestBlock(
     method: MethodInfo,
-    dataSourceName: string, // This parameter seems unused, can be removed if not needed elsewhere
-    projectPackageName: string = "your_project_name" // Also seems unused here
+    dataSourceName: string,
+    projectPackageName: string = "your_project_name"
   ): string {
     const methodName = method.method_name;
     const returnType = method.return_type || "dynamic";
@@ -355,7 +355,7 @@ class DataSourceTestGenerator {
           item.name !== currentTestSpecificMockFileName
         ) {
           let relativePath = path.relative(newTestFileDir, fullPath);
-          relativePath = relativePath.replace(/\\/g, "/"); // Ensure forward slashes
+          relativePath = relativePath.replace(/\\/g, "/");
           mockImportStatements.push(`import '${relativePath}';`);
         }
       }

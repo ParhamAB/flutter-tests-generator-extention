@@ -41,7 +41,6 @@ function extractModelInfo(
       importPath,
     });
   }
-  console.log(modelClasses);
   return modelClasses;
 }
 

@@ -28,6 +28,10 @@
       {
         "command": "extension.generateDataSourceTest",
         "title": "🧪 Flutter Generate Data Source Test"
+      },
+      {
+        "command": "extension.generateRepositoryTest",
+        "title": "🧪 Flutter Generate Repository Test"
       }
     ],
     "menus": {
@@ -39,6 +43,11 @@
         },
         {
           "command": "extension.generateDataSourceTest",
+          "when": "explorerResourceIsFolder || resourceExtname == .dart",
+          "group": "1_modification"
+        },
+        {
+          "command": "extension.generateRepositoryTest",
           "when": "explorerResourceIsFolder || resourceExtname == .dart",
           "group": "1_modification"
         }
