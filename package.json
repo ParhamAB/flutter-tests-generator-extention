@@ -32,6 +32,10 @@
       {
         "command": "extension.generateRepositoryTest",
         "title": "🧪 Flutter Generate Repository Test"
+      },
+      {
+        "command": "extension.generateUseCaseTest",
+        "title": "🧪 Flutter Generate Use Case Test"
       }
     ],
     "menus": {
@@ -48,6 +52,11 @@
         },
         {
           "command": "extension.generateRepositoryTest",
+          "when": "explorerResourceIsFolder || resourceExtname == .dart",
+          "group": "1_modification"
+        },
+        {
+          "command": "extension.generateUseCaseTest",
           "when": "explorerResourceIsFolder || resourceExtname == .dart",
           "group": "1_modification"
         }
